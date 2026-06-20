@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "UserProfile",
+      "description": "Information about standard and premium authenticated users of Macify OS.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique Firebase Authentication UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar profile photo URL."
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["free", "premium"],
+          "description": "Active subscription tier."
+        },
+        "subscriptionStatus": {
+          "type": "string",
+          "enum": ["free_tier", "lifetime", "pending"],
+          "description": "Current payment/subscription state."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Chronological profile registration date."
+        },
+        "momoReference": {
+          "type": "string",
+          "description": "MTN Mobile Money verified reference or transaction ID."
+        },
+        "momoPhoneNumber": {
+          "type": "string",
+          "description": "The Mobile Money phone number used to make the premium payment."
+        }
+      },
+      "required": ["uid", "email", "displayName", "plan", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Users collection mapping for identity auth and active subscriptions."
+    }
+  }
+}

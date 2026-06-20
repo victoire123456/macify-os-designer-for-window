@@ -1,0 +1,6 @@
+{
+  "name": "Macify OS",
+  "description": "A complete macOS-style Desktop Environment for Windows with advanced window managers, dynamic menu bar, magnification dock, Finder, Launchpad, Mission Control, and simulated Windows applications support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
