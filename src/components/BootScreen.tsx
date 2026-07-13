@@ -96,6 +96,17 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
   };
 
   const handleInstallApp = async () => {
+    if (isIframe) {
+      // Open in a new tab where standard PWA capability is unlocked
+      addNotification(
+        '🚀 Opening Workspace...', 
+        'Launching in a new tab to bypass sandbox limits and unlock native installation.', 
+        'System Kernel'
+      );
+      window.open(window.location.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     if (deferredPrompt) {
       deferredPrompt.prompt();
       try {
@@ -106,23 +117,23 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
             'Macify OS is being added to your desktop workspaces.', 
             'System Kernel'
           );
+          setPwaInteracted(true);
+          setInstallerInteracted(true);
         }
       } catch (err) {
         console.error('Error in prompt choice:', err);
       }
       setDeferredPrompt(null);
     } else {
-      // Simulate if PWA trigger is blocked/unsupported (e.g. inside an iframe)
+      // Browser doesn't have the event deferred yet (or isn't Chromium)
       addNotification(
-        '🚀 Simulation Mode', 
-        'Browser frame sandbox detected. Macify OS simulated native desktop install successfully.', 
+        '💡 Address Bar Installation', 
+        'Click the (+) icon in your web browser address bar or menu to save Macify OS to your computer.', 
         'System Kernel'
       );
+      setPwaInteracted(true);
+      setInstallerInteracted(true);
     }
-    
-    // Set interacted to true to unlock the Start button
-    setPwaInteracted(true);
-    setInstallerInteracted(true);
   };
 
   const handleRejectInstall = () => {
@@ -177,28 +188,28 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
                 <div className="w-full bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-left space-y-2">
                   <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
                     <AlertCircle size={14} />
-                    <span>Sandbox Sandbox Frame Detected</span>
+                    <span>Sandbox Frame Restrictions Active</span>
                   </div>
                   <p className="text-[11px] text-neutral-300 leading-normal">
                     To install this app natively onto your computer:
                   </p>
-                  <ol className="list-decimal list-inside text-[10px] text-neutral-400 space-y-1 pl-1">
-                    <li>Click the <strong className="text-white">"Open in New Tab"</strong> button in the top-right corner of the preview.</li>
-                    <li>Once open in a new browser tab, click <strong className="text-white">"Install App"</strong> to save Macify OS instantly onto your desktop or taskbar!</li>
+                  <ol className="list-decimal list-inside text-[10px] text-neutral-400 space-y-1.5 pl-1">
+                    <li>Click the <strong className="text-white">"Open in New Tab & Install"</strong> button below.</li>
+                    <li>In the new tab, click <strong className="text-white">"Install App"</strong> to download Macify OS instantly onto your desktop or taskbar!</li>
                   </ol>
                 </div>
               ) : (
                 <div className="w-full bg-sky-500/10 border border-sky-500/20 rounded-2xl p-4 text-left space-y-2">
                   <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs">
                     <Info size={14} />
-                    <span>Desktop App Installation</span>
+                    <span>Desktop App Ready</span>
                   </div>
                   <p className="text-[11px] text-neutral-300 leading-normal">
                     Click <strong className="text-white">"Install App"</strong> below to download Macify OS directly to your local computer. It will launch in a dedicated frameless workspace and support offline startup.
                   </p>
                   {!deferredPrompt && (
                     <p className="text-[10px] text-neutral-400 italic">
-                      Tip: If the prompt doesn't open automatically, click the <strong className="text-neutral-300">Install (+) Icon</strong> in your browser's address bar.
+                      Tip: If the prompt doesn't open automatically, look for the <strong className="text-neutral-300">Install (+) Icon</strong> in your browser's address bar.
                     </p>
                   )}
                 </div>
@@ -212,11 +223,13 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
                   className="flex flex-col items-center text-center p-5 rounded-2xl border-2 border-sky-500/40 hover:border-sky-500 bg-sky-950/20 hover:bg-sky-500/10 transition-all duration-300 cursor-pointer group hover:scale-[1.02]"
                 >
                   <div className="w-11 h-11 rounded-full bg-sky-500/15 flex items-center justify-center mb-3 text-sky-400 group-hover:scale-110 transition-transform">
-                    <Download size={20} />
+                    {isIframe ? <ExternalLink size={20} /> : <Download size={20} />}
                   </div>
-                  <h3 className="text-xs font-bold text-white mb-1">Install App</h3>
+                  <h3 className="text-xs font-bold text-white mb-1">
+                    {isIframe ? "Open Tab & Install" : "Install App"}
+                  </h3>
                   <p className="text-[10px] text-neutral-400 leading-normal">
-                    Frameless screen, taskbar integration, and offline utility.
+                    {isIframe ? "Unlocks local computer installation outside frame." : "Frameless screen, taskbar integration, and offline utility."}
                   </p>
                 </button>
 
