@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Apple, Play, Download, Globe, Shield, Laptop, Monitor, Sparkles } from 'lucide-react';
+import { Apple, Play, Download, Globe, Shield, Laptop, Monitor, Sparkles, AlertCircle, Info, ExternalLink } from 'lucide-react';
 import { useMacify } from '../store';
 import AppLogo from './AppLogo';
 
@@ -20,6 +20,15 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
   const [progress, setProgress] = useState(0);
   const [bootBegun, setBootBegun] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isIframe, setIsIframe] = useState(false);
+
+  useEffect(() => {
+    try {
+      setIsIframe(window.self !== window.top);
+    } catch (e) {
+      setIsIframe(true);
+    }
+  }, []);
 
   // Detect if running as standalone PWA
   const isStandalone = 
@@ -163,6 +172,38 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
                 </p>
               </div>
 
+              {/* Dynamic Step-by-Step Native Installation Helper Guides */}
+              {isIframe ? (
+                <div className="w-full bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-left space-y-2">
+                  <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
+                    <AlertCircle size={14} />
+                    <span>Sandbox Sandbox Frame Detected</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    To install this app natively onto your computer:
+                  </p>
+                  <ol className="list-decimal list-inside text-[10px] text-neutral-400 space-y-1 pl-1">
+                    <li>Click the <strong className="text-white">"Open in New Tab"</strong> button in the top-right corner of the preview.</li>
+                    <li>Once open in a new browser tab, click <strong className="text-white">"Install App"</strong> to save Macify OS instantly onto your desktop or taskbar!</li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="w-full bg-sky-500/10 border border-sky-500/20 rounded-2xl p-4 text-left space-y-2">
+                  <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs">
+                    <Info size={14} />
+                    <span>Desktop App Installation</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    Click <strong className="text-white">"Install App"</strong> below to download Macify OS directly to your local computer. It will launch in a dedicated frameless workspace and support offline startup.
+                  </p>
+                  {!deferredPrompt && (
+                    <p className="text-[10px] text-neutral-400 italic">
+                      Tip: If the prompt doesn't open automatically, click the <strong className="text-neutral-300">Install (+) Icon</strong> in your browser's address bar.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Two Option Cards side-by-side */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 {/* OPTION A: Install (PWA) */}
@@ -173,7 +214,7 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
                   <div className="w-11 h-11 rounded-full bg-sky-500/15 flex items-center justify-center mb-3 text-sky-400 group-hover:scale-110 transition-transform">
                     <Download size={20} />
                   </div>
-                  <h3 className="text-xs font-bold text-white mb-1">Download Native App</h3>
+                  <h3 className="text-xs font-bold text-white mb-1">Install App</h3>
                   <p className="text-[10px] text-neutral-400 leading-normal">
                     Frameless screen, taskbar integration, and offline utility.
                   </p>
@@ -207,7 +248,7 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0 } as any}
-              className="text-center p-8 flex flex-col items-center z-10"
+              className="text-center p-8 flex flex-col items-center z-10 space-y-6"
             >
               {/* Pulsing launcher button */}
               <button
@@ -230,12 +271,28 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
                 <div className="absolute inset-0 bg-sky-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-350 pointer-events-none" />
               </button>
               
-              <div className="mt-6 text-[10px] tracking-[0.25em] font-extrabold text-sky-400 animate-pulse uppercase pointer-events-none">
-                Start Macify Shell
+              <div className="text-center">
+                <div className="text-[10px] tracking-[0.25em] font-extrabold text-sky-400 animate-pulse uppercase pointer-events-none">
+                  Start Macify Shell
+                </div>
+                <p className="text-[10px] text-neutral-500 font-semibold mt-1 font-mono">
+                  {isStandalone ? 'NATIVE APPLICATION ACTIVE' : 'BROWSER SESSION READY'}
+                </p>
               </div>
-              <p className="text-[10px] text-neutral-500 font-semibold mt-1 font-mono">
-                {isStandalone ? 'NATIVE APPLICATION ACTIVE' : 'BROWSER SESSION READY'}
-              </p>
+
+              {/* Extra prominent helper option to install the App directly from the start screen if not running standalone */}
+              {!isStandalone && (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  onClick={handleInstallApp}
+                  className="px-5 py-2 rounded-full text-xs font-bold border border-white/10 hover:border-sky-500/50 bg-white/5 hover:bg-sky-500/15 text-neutral-300 hover:text-white transition-all duration-300 flex items-center space-x-2 shadow-md cursor-pointer hover:scale-105"
+                >
+                  <Download size={14} className="text-sky-400" />
+                  <span>Install App</span>
+                </motion.button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
