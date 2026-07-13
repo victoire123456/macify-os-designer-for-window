@@ -3,11 +3,54 @@ import path from 'path';
 import fs from 'fs';
 import childProcess from 'child_process';
 import { fileURLToPath } from 'url';
+import sqlite3 from 'sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow;
+let db;
+
+// Initialize SQLite Database
+function initDatabase() {
+  try {
+    const userDataPath = app.getPath('userData');
+    const dbDir = path.join(userDataPath, 'database');
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    const dbPath = path.join(dbDir, 'macify.db');
+    console.log('Initializing local offline SQLite database at:', dbPath);
+    
+    db = new sqlite3.Database(dbPath);
+    db.serialize(() => {
+      // 1. Settings Table (Local settings, themes, preferences)
+      db.run(`CREATE TABLE IF NOT EXISTS settings (
+        id TEXT PRIMARY KEY,
+        isDarkMode INTEGER DEFAULT 0,
+        dockSize INTEGER DEFAULT 48,
+        dockMagnification REAL DEFAULT 1.35,
+        brightness INTEGER DEFAULT 90,
+        volume INTEGER DEFAULT 75,
+        clockFormat TEXT DEFAULT 'short'
+      )`);
+
+      // Seed default settings row if not exists
+      db.run(`INSERT OR IGNORE INTO settings (id) VALUES ('system')`);
+
+      // 2. User Data Table (Notes, conversations, wallpapers, icons, recent files, and bookmarks)
+      db.run(`CREATE TABLE IF NOT EXISTS user_data (
+        id TEXT PRIMARY KEY,
+        dataType TEXT, -- 'note', 'wallpaper', 'desktop_icon', 'bookmark', 'ai_history', 'recent_file'
+        name TEXT,
+        value TEXT, -- JSON content string
+        updatedAt TEXT
+      )`);
+    });
+  } catch (err) {
+    console.error('Failed to initialize local SQLite database:', err);
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -36,6 +79,90 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// Register Offline Local Settings and User Data IPC handlers
+ipcMain.handle('get-local-settings', async () => {
+  return new Promise((resolve) => {
+    if (!db) { resolve(null); return; }
+    db.get(`SELECT * FROM settings WHERE id = 'system'`, [], (err, row) => {
+      if (err || !row) {
+        resolve(null);
+      } else {
+        resolve({
+          isDarkMode: row.isDarkMode === 1,
+          dockSize: row.dockSize,
+          dockMagnification: row.dockMagnification,
+          brightness: row.brightness,
+          volume: row.volume,
+          clockFormat: row.clockFormat
+        });
+      }
+    });
+  });
+});
+
+ipcMain.handle('save-local-settings', async (event, settings) => {
+  return new Promise((resolve) => {
+    if (!db) { resolve({ success: false }); return; }
+    db.run(
+      `INSERT OR REPLACE INTO settings (id, isDarkMode, dockSize, dockMagnification, brightness, volume, clockFormat) VALUES ('system', ?, ?, ?, ?, ?, ?)`,
+      [
+        settings.isDarkMode ? 1 : 0,
+        settings.dockSize ?? 48,
+        settings.dockMagnification ?? 1.35,
+        settings.brightness ?? 90,
+        settings.volume ?? 75,
+        settings.clockFormat ?? 'short'
+      ],
+      function (err) {
+        resolve({ success: !err, error: err?.message });
+      }
+    );
+  });
+});
+
+ipcMain.handle('get-local-data-items', async (event, { dataType }) => {
+  return new Promise((resolve) => {
+    if (!db) { resolve([]); return; }
+    db.all(`SELECT id, name, value, updatedAt FROM user_data WHERE dataType = ?`, [dataType], (err, rows) => {
+      if (err || !rows) {
+        resolve([]);
+      } else {
+        resolve(rows.map(r => ({
+          id: r.id,
+          dataType,
+          name: r.name,
+          value: JSON.parse(r.value),
+          updatedAt: r.updatedAt
+        })));
+      }
+    });
+  });
+});
+
+ipcMain.handle('save-local-data-item', async (event, { dataType, id, name, value }) => {
+  return new Promise((resolve) => {
+    if (!db) { resolve({ success: false }); return; }
+    const valueStr = JSON.stringify(value);
+    const updatedAt = new Date().toISOString();
+    db.run(
+      `INSERT OR REPLACE INTO user_data (id, dataType, name, value, updatedAt) VALUES (?, ?, ?, ?, ?)`,
+      [id, dataType, name, valueStr, updatedAt],
+      function (err) {
+        resolve({ success: !err, error: err?.message });
+      }
+    );
+  });
+});
+
+ipcMain.handle('delete-local-data-item', async (event, { id }) => {
+  return new Promise((resolve) => {
+    if (!db) { resolve({ success: false }); return; }
+    db.run(`DELETE FROM user_data WHERE id = ?`, [id], function (err) {
+      resolve({ success: !err, error: err?.message });
+    });
+  });
+});
 
 // IPC handler to browse directories safely
 ipcMain.handle('read-folder', async (event, folderPath) => {
@@ -363,6 +490,7 @@ ipcMain.handle('scan-apps', async (event) => {
 
 // App Startup Management
 app.whenReady().then(() => {
+  initDatabase();
   createWindow();
 
   app.on('activate', () => {

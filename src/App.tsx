@@ -18,9 +18,6 @@ import { AnimatePresence } from 'motion/react';
 
 import BootScreen from './components/BootScreen';
 import SetupWizard from './components/SetupWizard';
-import PremiumOnboarding from './components/PremiumOnboarding';
-import { UserProfile } from './firebase';
-import { User } from 'firebase/auth';
 
 // Immersive virtual applications
 import FinderApp from './apps/FinderApp';
@@ -57,16 +54,10 @@ function MacifyShell() {
     altTabActiveIndex,
     setAltTabActiveIndex,
     isDarkMode,
-    brightness,
-    userPlan,
-    setUserPlan,
-    premiumModalOpen,
-    setPremiumModalOpen
+    brightness
   } = useMacify();
 
   const [booting, setBooting] = React.useState(true);
-  const [firebaseUser, setFirebaseUser] = React.useState<User | null>(null);
-  const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
 
   // Global Keyboard shortcuts & Key listeners
   useEffect(() => {
@@ -220,32 +211,6 @@ function MacifyShell() {
     }} />;
   }
 
-  // Blocker authenticating overlay check
-  if (!firebaseUser || !userProfile) {
-    return (
-      <PremiumOnboarding 
-        onLoginComplete={(user, profile) => {
-          setFirebaseUser(user);
-          setUserProfile(profile);
-          setUserPlan(profile.plan);
-        }}
-        onLogout={() => {
-          setFirebaseUser(null);
-          setUserProfile(null);
-          setUserPlan('free');
-        }}
-        currentProfile={userProfile}
-        onPlanUpdated={(newPlan) => {
-          if (userProfile) {
-            const updated = { ...userProfile, plan: newPlan };
-            setUserProfile(updated);
-          }
-          setUserPlan(newPlan);
-        }}
-      />
-    );
-  }
-
   return (
     <div
       className={`fixed inset-0 overflow-hidden w-full h-full select-none ${
@@ -314,28 +279,7 @@ function MacifyShell() {
       {/* First launch interactive configuration wizard */}
       <SetupWizard />
 
-      {/* Floating actively synced user account profile, plan status, and premium subscription payment flows on Desktop */}
-      <PremiumOnboarding 
-        isDesktopWidget={true}
-        onLoginComplete={(user, profile) => {
-          setFirebaseUser(user);
-          setUserProfile(profile);
-          setUserPlan(profile.plan);
-        }}
-        onLogout={() => {
-          setFirebaseUser(null);
-          setUserProfile(null);
-          setUserPlan('free');
-        }}
-        currentProfile={userProfile}
-        onPlanUpdated={(newPlan) => {
-          if (userProfile) {
-            const updated = { ...userProfile, plan: newPlan };
-            setUserProfile(updated);
-          }
-          setUserPlan(newPlan);
-        }}
-      />
+
     </div>
   );
 }

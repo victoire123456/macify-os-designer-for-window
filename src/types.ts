@@ -65,6 +65,13 @@ declare global {
       openApp: (exePath: string) => Promise<{ success: boolean; error?: string }>;
       readFolder: (folderPath: string) => Promise<FileSystemNode[]>;
       deleteFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+      
+      // Local Database SQLite APIs
+      getLocalSettings: () => Promise<any>;
+      saveLocalSettings: (settings: any) => Promise<any>;
+      getLocalDataItems: (dataType: string) => Promise<any[]>;
+      saveLocalDataItem: (dataType: string, id: string, name: string, value: any) => Promise<any>;
+      deleteLocalDataItem: (id: string) => Promise<any>;
     };
   }
 }

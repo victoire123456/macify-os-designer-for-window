@@ -130,12 +130,6 @@ export interface StoreType {
   systemLocale: string;
   systemRegion: string;
   systemLanguage: string;
-
-  // Plan Subscription States
-  userPlan: 'free' | 'premium';
-  setUserPlan: (plan: 'free' | 'premium') => void;
-  premiumModalOpen: boolean;
-  setPremiumModalOpen: (open: boolean) => void;
 }
 
 const StoreContext = createContext<StoreType | undefined>(undefined);
@@ -319,15 +313,6 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isDarkMode, setDarkMode] = useState(() => loadSavedState('dark_mode', false));
   const [wallpaper, setWallpaperState] = useState<WallpaperConfig>(() => loadSavedState('wallpaper', WALLPAPERS[0]));
   
-  // Custom Plan State
-  const [userPlan, setUserPlanState] = useState<'free' | 'premium'>(() => loadSavedState('user_plan', 'free'));
-  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
-
-  const setUserPlan = (plan: 'free' | 'premium') => {
-    setUserPlanState(plan);
-    try { localStorage.setItem('macify_user_plan', JSON.stringify(plan)); } catch (e) {}
-  };
-  
   // Custom & Interactive Wallpaper States
   const [favoriteWallpaperIds, setFavoriteWallpaperIdsState] = useState<string[]>(() => loadSavedState('fav_wallpapers', []));
   const [recentWallpaperIds, setRecentWallpaperIdsState] = useState<string[]>(() => loadSavedState('recent_wallpapers', [WALLPAPERS[0].id]));
@@ -344,6 +329,11 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const setAllApps = (nextApps: AppConfig[]) => {
     setAllAppsState(nextApps);
     try { localStorage.setItem('macify_all_apps', JSON.stringify(nextApps)); } catch (e) {}
+    if (window.macifyAPI) {
+      window.macifyAPI.saveLocalDataItem('all_apps', 'all_apps', 'all_apps', nextApps).catch(err => {
+        console.error('Failed to sync installed apps to SQLite:', err);
+      });
+    }
   };
 
   // System Preferences States
@@ -546,6 +536,63 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearInterval(timer);
   }, []);
 
+  // ----------------------------------------------------
+  // OFFLINE SQLite SYNC & PERSISTENCE
+  // ----------------------------------------------------
+  // A. Load Settings, FileSystem, and Installed Apps on Mount
+  useEffect(() => {
+    if (window.macifyAPI) {
+      // 1. Load Settings
+      window.macifyAPI.getLocalSettings().then((settings) => {
+        if (settings) {
+          if (settings.isDarkMode !== undefined) setDarkMode(settings.isDarkMode);
+          if (settings.dockSize !== undefined) setDockSizeState(settings.dockSize);
+          if (settings.dockMagnification !== undefined) setDockMagnificationState(settings.dockMagnification);
+          if (settings.brightness !== undefined) setBrightnessState(settings.brightness);
+          if (settings.volume !== undefined) setVolume(settings.volume);
+        }
+      }).catch(err => {
+        console.error('Failed to load local settings from SQLite:', err);
+      });
+
+      // 2. Load FileSystem
+      window.macifyAPI.getLocalDataItems('filesystem').then((items) => {
+        const fsItem = items.find(item => item.id === 'virtual_disk');
+        if (fsItem && Array.isArray(fsItem.value)) {
+          setFileSystem(fsItem.value);
+        }
+      }).catch(err => {
+        console.error('Failed to load virtual disk from SQLite:', err);
+      });
+
+      // 3. Load Apps
+      window.macifyAPI.getLocalDataItems('all_apps').then((items) => {
+        const appItem = items.find(item => item.id === 'all_apps');
+        if (appItem && Array.isArray(appItem.value)) {
+          setAllAppsState(appItem.value);
+        }
+      }).catch(err => {
+        console.error('Failed to load apps from SQLite:', err);
+      });
+    }
+  }, []);
+
+  // B. Save Settings Reactively When They Change
+  useEffect(() => {
+    if (window.macifyAPI) {
+      window.macifyAPI.saveLocalSettings({
+        isDarkMode,
+        dockSize,
+        dockMagnification,
+        brightness,
+        volume,
+        clockFormat: 'short'
+      }).catch(err => {
+        console.error('Failed to sync settings to SQLite:', err);
+      });
+    }
+  }, [isDarkMode, dockSize, dockMagnification, brightness, volume]);
+
   // Simulating small battery discharges
   useEffect(() => {
     const batteryTimer = setInterval(() => {
@@ -637,23 +684,16 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateLocalStorageFileSystem = (fs: FileSystemNode[]) => {
     localStorage.setItem('macify_filesystem', JSON.stringify(fs));
+    if (window.macifyAPI) {
+      window.macifyAPI.saveLocalDataItem('filesystem', 'virtual_disk', 'virtual_disk', fs).catch(err => {
+        console.error('Failed to sync filesystem to SQLite:', err);
+      });
+    }
   };
 
   // Window actions
   const openApp = (appId: AppID, params?: any) => {
     triggerAppBounce(appId);
-    
-    // Check if app is locked by subscription level
-    const freePlanApps = ['safari', 'finder', 'settings', 'terminal'];
-    if (userPlan === 'free' && !freePlanApps.includes(appId)) {
-      setPremiumModalOpen(true);
-      addNotification(
-        '👑 Premium Application Locked',
-        `"${INITIAL_APPS.find(a => a.id === appId)?.name || appId}" requires Macify Premium. Upgrade today for 1500 FRW.`,
-        'Workspace Guard'
-      );
-      return;
-    }
     
     // Natively launch file/program if running in Electron environment
     const targetApp = allApps.find(a => a.id === appId);
@@ -1248,10 +1288,6 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         systemLocale,
         systemRegion,
         systemLanguage,
-        userPlan,
-        setUserPlan,
-        premiumModalOpen,
-        setPremiumModalOpen,
       }}
     >
       {children}

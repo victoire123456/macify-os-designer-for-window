@@ -76,10 +76,7 @@ export default function SettingsApp({ params }: { params?: any }) {
     systemGmtOffset,
     systemLocale,
     systemRegion,
-    systemLanguage,
-    userPlan,
-    setUserPlan,
-    setPremiumModalOpen
+    systemLanguage
   } = useMacify();
 
   // Local filters & input controllers for wallpaper gallery
@@ -359,10 +356,8 @@ export default function SettingsApp({ params }: { params?: any }) {
               </div>
 
               <div className="flex justify-between text-xs pt-2 border-t border-neutral-200/50 dark:border-neutral-800/30">
-                <span className="font-semibold text-neutral-500 dark:text-neutral-400">Macify Active Plan</span>
-                <span className={`font-bold uppercase tracking-wider font-mono ${userPlan === 'premium' ? 'text-amber-500' : 'text-neutral-400'}`}>
-                  {userPlan === 'premium' ? '👑 Premium (Full)' : '⭐ Free Tier'}
-                </span>
+                <span className="font-semibold text-neutral-500 dark:text-neutral-400">Security Architecture</span>
+                <span className="font-mono text-neutral-800 dark:text-neutral-200">Offline SQLite & Preload Isolated IPC</span>
               </div>
             </div>
 
@@ -374,15 +369,6 @@ export default function SettingsApp({ params }: { params?: any }) {
               >
                 {isDarkMode ? '🌞 Switch to Light Presets' : '🌙 Switch to Dark Twilight'}
               </button>
-
-              {userPlan === 'free' && (
-                <button
-                  onClick={() => setPremiumModalOpen(true)}
-                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 text-white font-extrabold cursor-pointer transition shadow-lg shadow-orange-500/25"
-                >
-                  Upgrade to Premium
-                </button>
-              )}
             </div>
           </div>
         )}

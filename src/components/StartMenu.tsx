@@ -268,13 +268,13 @@ export default function StartMenu() {
               
               {/* User Identity Profile card */}
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-extrabold text-[11.5px] shadow border border-white/10 shrink-0">
-                  JA
+                <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 font-extrabold text-[11.5px] shadow border border-white/10 shrink-0 animate-[pulse_3s_infinite]">
+                  OS
                 </div>
                 <div className="min-w-0 pr-2">
-                  <div className="text-[11px] font-extrabold truncate">Joseph Atuyishime</div>
+                  <div className="text-[11px] font-extrabold truncate">Macify User</div>
                   <div className="text-[9px] text-neutral-400 font-semibold truncate leading-none mt-0.5">
-                    josephatuyishime
+                    local_admin
                   </div>
                 </div>
               </div>
@@ -376,7 +376,7 @@ export default function StartMenu() {
         <div
           onClick={() => {
             setPowerState('normal');
-            addNotification('System Awakened', 'Welcome back, Joseph!', 'Security Core');
+            addNotification('System Awakened', 'Welcome back to your workstation!', 'Security Core');
           }}
           className="fixed inset-0 z-[9999999] bg-neutral-950/95 flex flex-col items-center justify-center cursor-pointer font-sans"
         >
@@ -390,7 +390,7 @@ export default function StartMenu() {
               <Lock size={20} className="text-neutral-500" />
             </div>
             <h2 className="text-sm font-bold text-neutral-200">System Sleeping...</h2>
-            <p className="text-[10px] text-neutral-500 mt-1">Press any key or click the screen to wake up Joseph's session.</p>
+            <p className="text-[10px] text-neutral-500 mt-1">Press any key or click the screen to wake up the system session.</p>
           </motion.div>
         </div>
       )}

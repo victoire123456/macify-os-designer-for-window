@@ -4,7 +4,7 @@ import { WindowInstance } from '../types';
 import { Activity, Cpu, HardDrive, Network, Trash2, XCircle } from 'lucide-react';
 
 export default function TaskManagerApp() {
-  const { windows, closeApp, isDarkMode } = useMacify();
+  const { windows, closeApp, isDarkMode, addNotification } = useMacify();
 
   // Simulated system aggregates
   const [systemCPU, setSystemCPU] = useState(12);
@@ -12,6 +12,26 @@ export default function TaskManagerApp() {
   const [networkSpeed, setNetworkSpeed] = useState({ up: 120, down: 450 }); // KB/s
   const [cpuHistory, setCpuHistory] = useState<number[]>(Array(24).fill(12));
   const [ramHistory, setRamHistory] = useState<number[]>(Array(24).fill(42));
+
+  // Monitor CPU usage: if it exceeds 90% for more than 5 seconds, trigger a warning notification
+  const systemCpuRef = React.useRef(systemCPU);
+  useEffect(() => {
+    systemCpuRef.current = systemCPU;
+  }, [systemCPU]);
+
+  const isCpuHigh = systemCPU > 90;
+  useEffect(() => {
+    if (isCpuHigh) {
+      const timer = setTimeout(() => {
+        addNotification(
+          '⚠️ High CPU Usage Warning',
+          `System CPU usage has been critically high (${systemCpuRef.current}%) for more than 5 seconds. Consider closing heavy applications.`,
+          'Task Manager'
+        );
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isCpuHigh, addNotification]);
 
   // Simulating live resource usage oscillations
   useEffect(() => {
