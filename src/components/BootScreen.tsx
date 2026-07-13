@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Apple, Play, Volume2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Apple, Play, Download, Globe, Shield, Laptop, Monitor, Sparkles } from 'lucide-react';
+import { useMacify } from '../store';
 import AppLogo from './AppLogo';
 
 interface BootScreenProps {
@@ -8,11 +9,29 @@ interface BootScreenProps {
 }
 
 export default function BootScreen({ onBootComplete }: BootScreenProps) {
-  const [progress, setProgress] = useState(0);
-  const [showButton, setShowButton] = useState(false);
-  const [bootBegun, setBootBegun] = useState(false);
+  const { 
+    deferredPrompt, 
+    setDeferredPrompt, 
+    pwaInteracted, 
+    setPwaInteracted, 
+    addNotification 
+  } = useMacify();
 
-  // Auto-fill progress bar
+  const [progress, setProgress] = useState(0);
+  const [bootBegun, setBootBegun] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Detect if running as standalone PWA
+  const isStandalone = 
+    window.matchMedia('(display-mode: standalone)').matches || 
+    (navigator as any).standalone === true;
+
+  // Track if user has completed the installer interaction in the current screen
+  const [installerInteracted, setInstallerInteracted] = useState(() => {
+    return pwaInteracted || isStandalone;
+  });
+
+  // Auto-fill progress bar when booting is active
   useEffect(() => {
     if (!bootBegun) return;
 
@@ -22,11 +41,11 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
           clearInterval(interval);
           return 100;
         }
-        // randomized speed steps
-        const step = Math.floor(Math.random() * 12) + 4;
+        // randomized speed steps for a realistic boot sequence
+        const step = Math.floor(Math.random() * 14) + 5;
         return Math.min(100, prev + step);
       });
-    }, 180);
+    }, 150);
 
     return () => clearInterval(interval);
   }, [bootBegun]);
@@ -43,10 +62,9 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
 
   const handleStartBoot = () => {
     setBootBegun(true);
-    // Mimic the classic high fidelity startup sound via visual feedback or playing synthesised web audio
+    // Synthesize the classic premium macOS start chime!
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      // G-chord rich warm frequencies
       const frequencies = [220, 275, 330, 440, 550, 660];
       frequencies.forEach((freq, idx) => {
         const osc = audioCtx.createOscillator();
@@ -64,55 +82,166 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
         osc.stop(audioCtx.currentTime + 3.0);
       });
     } catch (e) {
-      console.log("Audio boot frequency sound synthesize blocked by user sandbox permissions.");
+      console.log("Audio boot frequency sound synthesize blocked by browser autoplay rules.");
     }
   };
 
-  const [imgError, setImgError] = useState(false);
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      try {
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          addNotification(
+            '🎉 Installation Started', 
+            'Macify OS is being added to your desktop workspaces.', 
+            'System Kernel'
+          );
+        }
+      } catch (err) {
+        console.error('Error in prompt choice:', err);
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Simulate if PWA trigger is blocked/unsupported (e.g. inside an iframe)
+      addNotification(
+        '🚀 Simulation Mode', 
+        'Browser frame sandbox detected. Macify OS simulated native desktop install successfully.', 
+        'System Kernel'
+      );
+    }
+    
+    // Set interacted to true to unlock the Start button
+    setPwaInteracted(true);
+    setInstallerInteracted(true);
+  };
 
-  useEffect(() => {
-    // Show splash press-button triggers if audio autoplay protection is strict or automatically begin setup
-    const initialDelay = setTimeout(() => {
-      setShowButton(true);
-    }, 200);
-    return () => clearTimeout(initialDelay);
-  }, []);
+  const handleRejectInstall = () => {
+    setPwaInteracted(true);
+    setInstallerInteracted(true);
+    addNotification(
+      '🌐 Browser Mode', 
+      'Running Macify OS in standard browser session. High fidelity canvas enabled.', 
+      'System Kernel'
+    );
+  };
 
   return (
-    <div className="fixed inset-0 bg-black z-[9999999] flex flex-col items-center justify-center select-none text-white">
+    <div className="fixed inset-0 bg-neutral-950 z-[9999999] flex flex-col items-center justify-center select-none text-white font-sans overflow-hidden">
+      {/* Dynamic ambient organic light flow in background */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-sky-500/10 via-indigo-500/5 to-purple-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:5rem_5rem] pointer-events-none opacity-30" />
+
       {!bootBegun ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-8 flex flex-col items-center"
-        >
-          {/* Logo Button - Interactive and fully filled with loge.png */}
-          <button
-            onClick={handleStartBoot}
-            className="w-28 h-28 rounded-[32px] overflow-hidden bg-neutral-950 border border-neutral-800 hover:border-sky-500/80 shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer group relative flex items-center justify-center p-0"
-            title="Launch Macify OS"
-          >
-            {!imgError ? (
-              <img 
-                src="/loge.png" 
-                alt="Macify OS" 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={() => setImgError(true)}
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Apple size={52} className="text-white animate-pulse" />
-            )}
-            {/* Subtle glow border overlay on hover */}
-            <div className="absolute inset-0 bg-sky-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-350 pointer-events-none" />
-          </button>
-          
-          <div className="mt-5 text-[10px] tracking-[0.25em] font-bold text-neutral-500 hover:text-white transition duration-300 uppercase pointer-events-none select-none">
-            Click to Launch
-          </div>
-        </motion.div>
+        <AnimatePresence mode="wait">
+          {!installerInteracted ? (
+            /* INTERACTIVE PWA CHOOSE STEP (Asked to install or reject first) */
+            <motion.div
+              key="installer-step"
+              initial={{ opacity: 0, scale: 0.96, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -15 } as any}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              className="relative max-w-lg w-[calc(100vw-3rem)] rounded-[32px] border border-white/10 p-8 backdrop-blur-3xl bg-neutral-900/60 shadow-[0_30px_80px_rgba(0,0,0,0.6)] flex flex-col items-center text-center space-y-7 z-10"
+              id="pwa-installer-modal"
+            >
+              {/* Elegant header glow and badge */}
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-bold font-mono uppercase tracking-widest flex items-center space-x-1.5 shadow-sm">
+                <Sparkles size={11} className="animate-pulse" />
+                <span>Launch Assistant v14.1</span>
+              </div>
+
+              {/* High precision Apple design system icon block */}
+              <div className="w-20 h-20 rounded-[24px] bg-neutral-950 flex items-center justify-center border border-white/10 shadow-[0_12px_24px_rgba(0,0,0,0.5)] overflow-hidden">
+                <AppLogo size={74} />
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-white">Choose Workspace Mode</h2>
+                <p className="text-xs text-neutral-400 mt-2 max-w-sm mx-auto leading-relaxed">
+                  To experience premium macOS Sequoia frameless workspaces, custom offline support, and system key-mappings, install the app directly.
+                </p>
+              </div>
+
+              {/* Two Option Cards side-by-side */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                {/* OPTION A: Install (PWA) */}
+                <button
+                  onClick={handleInstallApp}
+                  className="flex flex-col items-center text-center p-5 rounded-2xl border-2 border-sky-500/40 hover:border-sky-500 bg-sky-950/20 hover:bg-sky-500/10 transition-all duration-300 cursor-pointer group hover:scale-[1.02]"
+                >
+                  <div className="w-11 h-11 rounded-full bg-sky-500/15 flex items-center justify-center mb-3 text-sky-400 group-hover:scale-110 transition-transform">
+                    <Download size={20} />
+                  </div>
+                  <h3 className="text-xs font-bold text-white mb-1">Download Native App</h3>
+                  <p className="text-[10px] text-neutral-400 leading-normal">
+                    Frameless screen, taskbar integration, and offline utility.
+                  </p>
+                </button>
+
+                {/* OPTION B: Browser Mode (Reject) */}
+                <button
+                  onClick={handleRejectInstall}
+                  className="flex flex-col items-center text-center p-5 rounded-2xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 transition-all duration-300 cursor-pointer group hover:scale-[1.02]"
+                >
+                  <div className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center mb-3 text-neutral-400 group-hover:scale-110 transition-transform">
+                    <Globe size={20} />
+                  </div>
+                  <h3 className="text-xs font-bold text-white mb-1">Standard Browser Mode</h3>
+                  <p className="text-[10px] text-neutral-400 leading-normal">
+                    Quick launch directly inside your regular web browser tab.
+                  </p>
+                </button>
+              </div>
+
+              {/* Subtle secure footer */}
+              <div className="flex items-center space-x-1.5 text-[10px] text-neutral-500 font-medium">
+                <Shield size={11} className="text-neutral-500" />
+                <span>Zero configuration required • Sandbox safe</span>
+              </div>
+            </motion.div>
+          ) : (
+            /* SYSTEM START/LAUNCH BUTTON (Unlocked after interaction) */
+            <motion.div
+              key="launch-step"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0 } as any}
+              className="text-center p-8 flex flex-col items-center z-10"
+            >
+              {/* Pulsing launcher button */}
+              <button
+                onClick={handleStartBoot}
+                className="w-28 h-28 rounded-[32px] overflow-hidden bg-neutral-950 border border-neutral-800 hover:border-sky-500/80 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer group relative flex items-center justify-center p-0"
+                title="Launch Macify OS"
+              >
+                {!imgError ? (
+                  <img 
+                    src="/loge.png" 
+                    alt="Macify OS" 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={() => setImgError(true)}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <Apple size={52} className="text-white animate-pulse" />
+                )}
+                {/* Glow ring layout on hover */}
+                <div className="absolute inset-0 bg-sky-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-350 pointer-events-none" />
+              </button>
+              
+              <div className="mt-6 text-[10px] tracking-[0.25em] font-extrabold text-sky-400 animate-pulse uppercase pointer-events-none">
+                Start Macify Shell
+              </div>
+              <p className="text-[10px] text-neutral-500 font-semibold mt-1 font-mono">
+                {isStandalone ? 'NATIVE APPLICATION ACTIVE' : 'BROWSER SESSION READY'}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       ) : (
-        <div className="flex flex-col items-center">
+        /* BOOT PROGRESS CYCLE SCREEN */
+        <div className="flex flex-col items-center z-10">
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -123,7 +252,7 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
           </motion.div>
 
           {/* Symmetrical simple white progress bar load cycles */}
-          <div className="w-48 h-1 bg-neutral-800 rounded-full overflow-hidden relative border border-white/5">
+          <div className="w-52 h-1 bg-neutral-800 rounded-full overflow-hidden relative border border-white/5">
             <motion.div
               style={{ width: `${progress}%` }}
               className="h-full bg-white rounded-full shadow-inner"
@@ -133,7 +262,7 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
 
           <p className="mt-4 font-mono text-[9px] tracking-widest text-neutral-500 uppercase">
             {progress < 40
-              ? 'Initializing Win32 Bridge...'
+              ? 'Initializing Virtual Subsystems...'
               : progress < 75
               ? 'Loading Sequoia Workspace Canvas...'
               : 'Opening Finder session...'}

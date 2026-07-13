@@ -137,6 +137,12 @@ export interface StoreType {
   stopSystem: () => void;
   isBooting: boolean;
   setIsBooting: (booting: boolean) => void;
+
+  // PWA Subsystems
+  deferredPrompt: any;
+  setDeferredPrompt: (prompt: any) => void;
+  pwaInteracted: boolean;
+  setPwaInteracted: (interacted: boolean) => void;
 }
 
 const StoreContext = createContext<StoreType | undefined>(undefined);
@@ -333,6 +339,17 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const running = loadSavedState('system_running', true);
     return running;
   });
+
+  // PWA Deferred Prompt & Interaction States
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [pwaInteracted, setPwaInteractedState] = useState<boolean>(() => {
+    return loadSavedState('pwa_interacted', false);
+  });
+
+  const setPwaInteracted = (interacted: boolean) => {
+    setPwaInteractedState(interacted);
+    try { localStorage.setItem('macify_pwa_interacted', JSON.stringify(interacted)); } catch (e) {}
+  };
 
   const allWallpapers = [...WALLPAPERS, ...customWallpapers];
   const [windowsAgentConnected, setWindowsAgentConnected] = useState(true);
@@ -863,7 +880,27 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
     }
 
-    // 2. Online/offline event listeners
+    // 2. beforeinstallprompt and appinstalled event handling
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      console.log('beforeinstallprompt event triggered and captured globally.');
+    };
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      setPwaInteracted(true);
+      addNotification(
+        '🎉 Installation Success', 
+        'Macify OS has been installed as a native desktop application. Enjoy!', 
+        'System Kernel'
+      );
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // 3. Online/offline event listeners
     const handleOnline = () => {
       addNotification('📶 Online Mode', 'Your device is back online. Internet services synchronized.', 'System Kernel');
     };
@@ -875,6 +912,8 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -1351,6 +1390,10 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         stopSystem,
         isBooting,
         setIsBooting,
+        deferredPrompt,
+        setDeferredPrompt,
+        pwaInteracted,
+        setPwaInteracted,
       }}
     >
       {children}

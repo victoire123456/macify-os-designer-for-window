@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useMacify } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Monitor, Download, X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import AppLogo from './AppLogo';
 
 export default function InstallPrompt() {
-  const { addNotification, isDarkMode } = useMacify();
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { 
+    deferredPrompt, 
+    setDeferredPrompt, 
+    pwaInteracted, 
+    setPwaInteracted, 
+    addNotification 
+  } = useMacify();
+  
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
@@ -17,37 +23,18 @@ export default function InstallPrompt() {
 
     const isDismissed = localStorage.getItem('macify_install_dismissed') === 'true';
 
-    if (isStandalone || isDismissed) {
+    if (isStandalone || isDismissed || pwaInteracted || !deferredPrompt) {
+      setShowPrompt(false);
       return;
     }
 
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      // Stagger slightly for premium entrance feel after page load
-      const timer = setTimeout(() => {
-        setShowPrompt(true);
-      }, 3500);
-      return () => clearTimeout(timer);
-    };
+    // Stagger slightly for premium entrance feel after page load
+    const timer = setTimeout(() => {
+      setShowPrompt(true);
+    }, 4500);
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    window.addEventListener('appinstalled', () => {
-      setShowPrompt(false);
-      setDeferredPrompt(null);
-      localStorage.setItem('macify_install_dismissed', 'true');
-      addNotification(
-        '🎉 Installation Success', 
-        'Macify OS has been installed as a native desktop application. Enjoy!', 
-        'System Kernel'
-      );
-    });
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, [addNotification]);
+    return () => clearTimeout(timer);
+  }, [deferredPrompt, pwaInteracted]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -73,11 +60,13 @@ export default function InstallPrompt() {
       console.error('Error during PWA installation choice:', err);
     }
     setDeferredPrompt(null);
+    setPwaInteracted(true);
   };
 
   const handleNotNowClick = () => {
     setShowPrompt(false);
     localStorage.setItem('macify_install_dismissed', 'true');
+    setPwaInteracted(true);
   };
 
   return (
