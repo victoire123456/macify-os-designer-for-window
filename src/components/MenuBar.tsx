@@ -46,7 +46,8 @@ export default function MenuBar() {
     windowsAgentConnected,
     setWindowsAgentConnected,
     createFile,
-    pasteNode
+    pasteNode,
+    stopSystem
   } = useMacify();
 
   const [helpOpen, setHelpOpen] = useState(false);
@@ -167,6 +168,16 @@ export default function MenuBar() {
                 >
                   <LogOut size={14} className="mr-2.5 text-rose-450" />
                   Lock Desktop Environment
+                </button>
+                <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
+                <button
+                  onClick={() => { stopSystem(); setActiveMenu(null); }}
+                  className="flex w-full items-center px-3 py-1.5 hover:bg-rose-600 hover:text-white rounded-md text-left text-red-500 font-bold transition duration-150"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="mr-2.5">
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
+                  </svg>
+                  Shutdown Macify Shell
                 </button>
               </motion.div>
             )}

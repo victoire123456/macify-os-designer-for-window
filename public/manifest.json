@@ -1,0 +1,22 @@
+{
+  "short_name": "Macify OS",
+  "name": "Macify OS Desktop Environment",
+  "description": "Transform Windows into a premium Apple Sequoia visual layer.",
+  "icons": [
+    {
+      "src": "/loge.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/loge.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#1e1e2e",
+  "theme_color": "#0f0f15",
+  "display": "standalone",
+  "orientation": "any"
+}

@@ -68,6 +68,8 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
     }
   };
 
+  const [imgError, setImgError] = useState(false);
+
   useEffect(() => {
     // Show splash press-button triggers if audio autoplay protection is strict or automatically begin setup
     const initialDelay = setTimeout(() => {
@@ -90,12 +92,17 @@ export default function BootScreen({ onBootComplete }: BootScreenProps) {
             className="w-28 h-28 rounded-[32px] overflow-hidden bg-neutral-950 border border-neutral-800 hover:border-sky-500/80 shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer group relative flex items-center justify-center p-0"
             title="Launch Macify OS"
           >
-            <img 
-              src="/loge.png" 
-              alt="Macify OS" 
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              referrerPolicy="no-referrer"
-            />
+            {!imgError ? (
+              <img 
+                src="/loge.png" 
+                alt="Macify OS" 
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={() => setImgError(true)}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Apple size={52} className="text-white animate-pulse" />
+            )}
             {/* Subtle glow border overlay on hover */}
             <div className="absolute inset-0 bg-sky-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-350 pointer-events-none" />
           </button>

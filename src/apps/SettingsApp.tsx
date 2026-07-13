@@ -76,7 +76,10 @@ export default function SettingsApp({ params }: { params?: any }) {
     systemGmtOffset,
     systemLocale,
     systemRegion,
-    systemLanguage
+    systemLanguage,
+    isSystemRunning,
+    startSystem,
+    stopSystem
   } = useMacify();
 
   // Local filters & input controllers for wallpaper gallery
@@ -358,6 +361,41 @@ export default function SettingsApp({ params }: { params?: any }) {
               <div className="flex justify-between text-xs pt-2 border-t border-neutral-200/50 dark:border-neutral-800/30">
                 <span className="font-semibold text-neutral-500 dark:text-neutral-400">Security Architecture</span>
                 <span className="font-mono text-neutral-800 dark:text-neutral-200">Offline SQLite & Preload Isolated IPC</span>
+              </div>
+            </div>
+
+            {/* System Engine State Card */}
+            <div className="max-w-md w-full rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 px-5 py-4 space-y-4 text-left shadow-xs">
+              <div className="flex items-center justify-between border-b border-neutral-200/55 dark:border-neutral-800/30 pb-2">
+                <h4 className="text-[10px] font-bold font-mono text-neutral-400 uppercase tracking-widest leading-none">System Engine Controls</h4>
+                <span className={`flex items-center space-x-1.5 text-[10px] font-bold font-mono uppercase ${isSystemRunning ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  <span className={`w-2 h-2 rounded-full ${isSystemRunning ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                  <span>{isSystemRunning ? 'Shell Active' : 'Shell Stopped'}</span>
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Macify Shell Engine</p>
+                  <p className="text-[10px] text-neutral-400">Controls virtualization services, dock rendering, and desktop subsystems.</p>
+                </div>
+                <div className="flex space-x-2">
+                  {isSystemRunning ? (
+                    <button
+                      onClick={stopSystem}
+                      className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs cursor-pointer transition shadow-xs"
+                    >
+                      Stop Engine
+                    </button>
+                  ) : (
+                    <button
+                      onClick={startSystem}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs cursor-pointer transition shadow-xs"
+                    >
+                      Start Engine
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

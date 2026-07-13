@@ -18,6 +18,8 @@ import { AnimatePresence } from 'motion/react';
 
 import BootScreen from './components/BootScreen';
 import SetupWizard from './components/SetupWizard';
+import PowerOffConsole from './components/PowerOffConsole';
+import InstallPrompt from './components/InstallPrompt';
 
 // Immersive virtual applications
 import FinderApp from './apps/FinderApp';
@@ -54,10 +56,12 @@ function MacifyShell() {
     altTabActiveIndex,
     setAltTabActiveIndex,
     isDarkMode,
-    brightness
+    brightness,
+    isSystemRunning,
+    isBooting,
+    setIsBooting,
+    addNotification
   } = useMacify();
-
-  const [booting, setBooting] = React.useState(true);
 
   // Global Keyboard shortcuts & Key listeners
   useEffect(() => {
@@ -201,9 +205,15 @@ function MacifyShell() {
     }
   };
 
-  if (booting) {
+  if (!isSystemRunning) {
+    return <PowerOffConsole />;
+  }
+
+  if (isBooting) {
     return <BootScreen onBootComplete={() => {
-      setBooting(false);
+      setIsBooting(false);
+      try { localStorage.setItem('macify_system_running', JSON.stringify(true)); } catch (e) {}
+      addNotification('🚀 System Active', 'Macify OS is now running. Welcome to your desktop environment.', 'System Kernel');
       // Auto open Finder on first launch (startup experience)
       if (windows.length === 0) {
         openApp('finder');
@@ -278,6 +288,9 @@ function MacifyShell() {
 
       {/* First launch interactive configuration wizard */}
       <SetupWizard />
+
+      {/* Progressive Web App Install Banner */}
+      <InstallPrompt />
 
 
     </div>

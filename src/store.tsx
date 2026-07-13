@@ -130,6 +130,13 @@ export interface StoreType {
   systemLocale: string;
   systemRegion: string;
   systemLanguage: string;
+
+  // System Running Engine
+  isSystemRunning: boolean;
+  startSystem: () => void;
+  stopSystem: () => void;
+  isBooting: boolean;
+  setIsBooting: (booting: boolean) => void;
 }
 
 const StoreContext = createContext<StoreType | undefined>(undefined);
@@ -310,7 +317,7 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [volume, setVolume] = useState(75);
   const [batteryLevel, setBatteryLevel] = useState(88);
   const [isBatteryCharging, setIsBatteryCharging] = useState(false);
-  const [isDarkMode, setDarkMode] = useState(() => loadSavedState('dark_mode', false));
+  const [isDarkMode, setDarkMode] = useState(() => loadSavedState('dark_mode', true));
   const [wallpaper, setWallpaperState] = useState<WallpaperConfig>(() => loadSavedState('wallpaper', WALLPAPERS[0]));
   
   // Custom & Interactive Wallpaper States
@@ -319,6 +326,13 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [customWallpapers, setCustomWallpapersState] = useState<WallpaperConfig[]>(() => loadSavedState('custom_wallpapers', []));
   const [firstLaunchCompleted, setFirstLaunchCompletedState] = useState<boolean>(() => loadSavedState('first_launch_completed', false));
   const [timeBasedWallpaperActive, setTimeBasedWallpaperActiveState] = useState<boolean>(() => loadSavedState('time_based_wallpaper', false));
+
+  // System Running Engine States
+  const [isSystemRunning, setIsSystemRunningState] = useState<boolean>(() => loadSavedState('system_running', true));
+  const [isBooting, setIsBooting] = useState<boolean>(() => {
+    const running = loadSavedState('system_running', true);
+    return running;
+  });
 
   const allWallpapers = [...WALLPAPERS, ...customWallpapers];
   const [windowsAgentConnected, setWindowsAgentConnected] = useState(true);
@@ -822,6 +836,50 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
+  const stopSystem = () => {
+    setWindows([]);
+    setFocusedWindowId(null);
+    setIsSystemRunningState(false);
+    setIsBooting(false);
+    try { localStorage.setItem('macify_system_running', JSON.stringify(false)); } catch (e) {}
+    addNotification('🛑 Engine Stopped', 'Macify OS has been stopped successfully. Virtual system resources released.', 'System Kernel');
+  };
+
+  const startSystem = () => {
+    setIsSystemRunningState(true);
+    setIsBooting(true);
+  };
+
+  // PWA Service Worker & Network Connection Listeners
+  useEffect(() => {
+    // 1. Service Worker registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('ServiceWorker registered successfully with scope: ', registration.scope);
+        })
+        .catch((error) => {
+          console.error('ServiceWorker registration failed: ', error);
+        });
+    }
+
+    // 2. Online/offline event listeners
+    const handleOnline = () => {
+      addNotification('📶 Online Mode', 'Your device is back online. Internet services synchronized.', 'System Kernel');
+    };
+    const handleOffline = () => {
+      addNotification('📡 Offline Mode', 'Your device is offline. Macify OS will continue to run with local features.', 'System Kernel');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // File System Implementation
   const createFile = (name: string, category: FileSystemNode['category'], type: 'file' | 'directory', content?: string) => {
     const path = `/${category}/${name}`;
@@ -1288,6 +1346,11 @@ export const MacifyProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         systemLocale,
         systemRegion,
         systemLanguage,
+        isSystemRunning,
+        startSystem,
+        stopSystem,
+        isBooting,
+        setIsBooting,
       }}
     >
       {children}
